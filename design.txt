@@ -1,0 +1,13 @@
+Project Files
+     ↓
+Code Indexer
+     ↓
+Vector Database
+     ↓
+Semantic Search
+     ↓
+Relevant Code
+     ↓
+DeepSeek API
+     ↓
+AI Response
