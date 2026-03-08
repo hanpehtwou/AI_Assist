@@ -10,11 +10,9 @@ const app = express();
 const PORT = 3000;
 const STORAGE_FILE = path.join(__dirname, "storage.json");
 
-// ================= AUTH CONFIG =================
 const AUTH_USER = "hanpeh2u@gmail.com";
 const AUTH_PASS = "Zamri800629!";
 
-// ================= CONFIGURATION =================
 const API_KEY = "sk-beca533e170c4516a9dab3011e1f5aec";
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
@@ -32,13 +30,11 @@ app.use(session({
     cookie: { secure: false }
 }));
 
-// ================= MIDDLEWARE =================
 const checkAuth = (req, res, next) => {
     if (req.session.loggedIn) next();
     else res.status(401).json({ error: "UNAUTHORIZED" });
 };
 
-// ================= DATABASE UTILS =================
 async function loadDB() {
     try {
         const data = await fs.readFile(STORAGE_FILE, "utf8");
@@ -54,7 +50,6 @@ async function saveDB(data) {
     await fs.writeFile(STORAGE_FILE, JSON.stringify(data, null, 2));
 }
 
-// ================= AUTH ROUTES =================
 app.post("/login", (req, res) => {
     const { email, password } = req.body;
     if (email === AUTH_USER && password === AUTH_PASS) {
@@ -70,7 +65,6 @@ app.get("/logout", (req, res) => {
     res.redirect("/");
 });
 
-// ================= API ENDPOINTS =================
 app.get("/api/projects", checkAuth, async (req, res) => {
     const db = await loadDB();
     res.json(db.projects.map(p => ({ id: p.id, name: p.name })));
@@ -147,7 +141,6 @@ app.post("/chat/stream", checkAuth, async (req, res) => {
     } catch (err) { res.end(); }
 });
 
-// ================= UI RENDERING =================
 app.get("/", (req, res) => {
     if (req.session.loggedIn) {
         res.send(`
@@ -155,28 +148,55 @@ app.get("/", (req, res) => {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>GREY_CONSOLE</title>
+    <title>GREY_CONSOLE_V3</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/base16/grayscale-light.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; outline: none !important; border: none; background: none; color: #333; font-family: 'Courier New', monospace; }
-        body { height: 100vh; display: flex; background: #fff; overflow: hidden; }
-        #sidebar { width: 280px; background: #eee; border-right: 2px solid #666; display: flex; flex-direction: column; }
+        body { height: 100vh; width: 100vw; display: flex; background: #fff; overflow: hidden; }
+        
+        /* Sidebar stays fixed */
+        #sidebar { width: 280px; min-width: 280px; background: #eee; border-right: 2px solid #666; display: flex; flex-direction: column; height: 100%; }
         .sidebar-header { padding: 20px; border-bottom: 2px solid #666; display: flex; justify-content: space-between; align-items: center; }
-        .new-btn { padding: 8px 12px; background: #333; color: #eee; cursor: pointer; font-weight: bold; }
+        .new-btn { padding: 8px 12px; background: #333; color: #eee; cursor: pointer; font-weight: bold; font-size: 12px; }
         #project-list { flex: 1; overflow-y: auto; padding: 10px; }
+        
         .project-item { padding: 10px; margin-bottom: 10px; border: 1px solid #999; cursor: pointer; background: #fdfdfd; }
         .project-item.active { background: #333 !important; color: #eee !important; }
         .project-item.active * { color: #eee !important; }
         .proj-meta { display: flex; gap: 10px; font-size: 10px; margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; }
         .action-link { cursor: pointer; text-decoration: underline; color: #888; }
-        #workspace { flex: 1; display: flex; flex-direction: column; background: #fff; }
-        #chat { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 30px; }
-        .msg { width: 100%; line-height: 1.6; border-bottom: 1px solid #eee; padding-bottom: 20px; }
-        pre { background: #333; padding: 15px; margin: 15px 0; overflow-x: auto; }
+        
+        /* Workspace constraints */
+        #workspace { flex: 1; display: flex; flex-direction: column; background: #fff; overflow: hidden; height: 100%; }
+        #chat { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 30px; scroll-behavior: smooth; }
+        
+        .msg { width: 100%; line-height: 1.6; border-bottom: 1px solid #eee; padding-bottom: 20px; word-wrap: break-word; }
+        
+        /* CODE BLOCK FIX: Prevents 500 lines from breaking layout */
+        pre { 
+            background: #333; 
+            padding: 15px; 
+            margin: 15px 0; 
+            max-height: 600px; 
+            overflow: auto; 
+            border: 1px solid #000;
+            position: relative;
+        }
+        code { color: #eee !important; font-size: 13px; white-space: pre; }
+        
         #bottom-bar { padding: 20px 30px; border-top: 2px solid #666; background: #eee; display: flex; gap: 10px; align-items: flex-end; }
-        textarea { flex: 1; min-height: 40px; border: 2px solid #666; padding: 10px; background: #fff; resize: none; }
+        textarea { 
+            flex: 1; 
+            min-height: 44px; 
+            max-height: 200px; 
+            border: 2px solid #666; 
+            padding: 10px; 
+            background: #fff; 
+            resize: none; 
+            overflow-y: auto;
+        }
         .send-btn { padding: 10px 20px; background: #333; color: #eee; cursor: pointer; font-weight: bold; height: 44px; }
     </style>
 </head>
@@ -211,9 +231,6 @@ app.get("/", (req, res) => {
                 <div class="project-item \${p.id === currentProjectId ? 'active' : ''}" data-id="\${p.id}" onclick="selectProject('\${p.id}')">
                     <div style="font-weight:bold;">\${p.name}</div>
                     <div class="proj-meta">
-                        <span class="action-link" onclick="renameProject(event, '\${p.id}', '\${p.name}')">REN</span>
-                        <span class="action-link" onclick="clearHistory(event, '\${p.id}')">CLR</span>
-                        <span class="action-link" onclick="exportProject(event, '\${p.id}', '\${p.name}')">EXP</span>
                         <span class="action-link" onclick="deleteProject(event, '\${p.id}')">KILL</span>
                     </div>
                 </div>
@@ -231,23 +248,45 @@ app.get("/", (req, res) => {
         }
 
         async function createProject() { const n = prompt("NAME:"); if (n) { await api('/api/projects', 'POST', { name: n }); await loadProjects(); } }
-        async function renameProject(e, id, old) { e.stopPropagation(); const n = prompt("NEW:", old); if(n) { await api(\`/api/projects/\${id}\`, 'PUT', { name: n }); loadProjects(); } }
-        async function clearHistory(e, id) { e.stopPropagation(); if(confirm("CLEAR?")) { await api(\`/api/projects/\${id}\`, 'PUT', { clearHistory: true }); if(currentProjectId === id) selectProject(id); } }
-        async function deleteProject(e, id) { e.stopPropagation(); if(confirm("KILL?")) { await api(\`/api/projects/\${id}\`, 'DELETE'); if(currentProjectId === id) location.reload(); loadProjects(); } }
-        async function exportProject(e, id, name) { e.stopPropagation(); const data = await api(\`/api/projects/\${id}\`); const blob = new Blob([data.history.map(m => \`### \${m.role.toUpperCase()}\\n\${m.content}\\n\\n\`).join('')], {type: 'text/markdown'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = \`\${name}.md\`; a.click(); }
+        async function deleteProject(e, id) { e.stopPropagation(); if(confirm("DEL?")) { await api(\`/api/projects/\${id}\`, 'DELETE'); if(currentProjectId === id) location.reload(); loadProjects(); } }
 
-        function renderMessage(role, content) { const d = document.createElement('div'); d.className = 'msg ' + (role === 'user' ? 'user' : 'ai'); d.innerHTML = (role === 'user' ? '>> ' : '') + marked.parse(content); chatBox.appendChild(d); return d; }
+        function renderMessage(role, content) { 
+            const d = document.createElement('div'); 
+            d.className = 'msg ' + (role === 'user' ? 'user' : 'ai'); 
+            d.innerHTML = (role === 'user' ? '>> ' : '') + marked.parse(content); 
+            chatBox.appendChild(d); 
+            return d; 
+        }
         
         async function ask() { 
             const val = input.value.trim(); if (!val || !currentProjectId) return; 
-            input.value = ''; renderMessage('user', val); const a = renderMessage('assistant', '...'); 
-            let full = ""; const r = await fetch('/chat/stream', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ message: val, projectId: currentProjectId }) }); 
+            input.value = ''; input.style.height = '44px';
+            renderMessage('user', val); 
+            const a = renderMessage('assistant', '...'); 
+            let full = ""; 
+            const r = await fetch('/chat/stream', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ message: val, projectId: currentProjectId }) 
+            }); 
             const reader = r.body.getReader(), decoder = new TextDecoder(); 
             while (true) { 
                 const { done, value } = await reader.read(); if (done) break; 
                 const lines = decoder.decode(value).split('\\n'); 
-                for (const line of lines) { if (line.startsWith('data: ')) { try { const d = JSON.parse(line.slice(6)); if (d.choices[0]?.delta?.content) { full += d.choices[0].delta.content; a.innerHTML = marked.parse(full); chatBox.scrollTop = chatBox.scrollHeight; } } catch(e) {} } } 
+                for (const line of lines) { 
+                    if (line.startsWith('data: ')) { 
+                        try { 
+                            const d = JSON.parse(line.slice(6)); 
+                            if (d.choices[0]?.delta?.content) { 
+                                full += d.choices[0].delta.content; 
+                                a.innerHTML = marked.parse(full); 
+                                chatBox.scrollTop = chatBox.scrollHeight; 
+                            } 
+                        } catch(e) {} 
+                    } 
+                } 
             } 
+            input.focus(); 
         }
         input.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } };
         loadProjects();
